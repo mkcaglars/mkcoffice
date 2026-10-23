@@ -3,12 +3,14 @@ import { GoogleAnalytics } from '@next/third-parties/google'
 import { getMessages } from "next-intl/server";
 import { I18nProvider } from "@/components/i18n-provider";
 import { ProgressProvider } from "@/components/progress-provider";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://office.ziziyi.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "ZIZIYI Office — Free Online Word, Excel & PowerPoint Editor",
+    default: "MKC Ofis — Free Online Word, Excel & PowerPoint Editor",
     template: "%s",
   },
   description:
@@ -27,17 +29,17 @@ export const metadata: Metadata = {
     "edit excel online",
     "serverless office",
     "privacy first",
-    "ZIZIYI",
+    "MKC Ofis",
   ],
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/logo.svg", type: "image/svg+xml" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
     ],
-    apple: "/logo.png",
+    apple: "/apple-touch-icon.png",
   },
   openGraph: {
-    siteName: "ZIZIYI Office",
+    siteName: "MKC Ofis",
     type: "website",
     locale: "en_US",
   },
@@ -45,14 +47,15 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     creator: "@nicezizi",
   },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  // Self-hosted (PHP backend) builds sit behind the portal login.
+  robots:
+    process.env.NEXT_PUBLIC_BACKEND === "php"
+      ? { index: false, follow: false }
+      : { index: true, follow: true },
   other: {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-title": "ZIZIYI Office",
+    "apple-mobile-web-app-title": "MKC Ofis",
   },
 };
 
@@ -73,8 +76,8 @@ export default async function RootLayout({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    name: "ZIZIYI Office",
-    url: "https://office.ziziyi.com",
+    name: "MKC Ofis",
+    url: SITE_URL,
     description:
       "Open, view, and edit Word, Excel, and PowerPoint documents directly in your browser. No upload, no server — your files stay private.",
     applicationCategory: "BusinessApplication",
@@ -106,8 +109,12 @@ export default async function RootLayout({
         <ProgressProvider>
           <I18nProvider initialMessages={messages}>{children}</I18nProvider>
         </ProgressProvider>
+        <Toaster position="bottom-center" />
       </body>
-      <GoogleAnalytics gaId="G-EFLBPT6TS8" />
+      {/* Self-hosted (PHP backend) builds do not report to the upstream analytics. */}
+      {process.env.NEXT_PUBLIC_BACKEND !== "php" && (
+        <GoogleAnalytics gaId="G-EFLBPT6TS8" />
+      )}
     </html>
   );
 }

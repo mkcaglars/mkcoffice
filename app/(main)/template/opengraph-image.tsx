@@ -6,7 +6,7 @@ export const dynamic = "force-static";
 export const contentType = "image/png";
 export const size = { width: 1200, height: 630 };
 export const alt =
-  "Free Office Templates – Word, Excel & PowerPoint | ZIZIYI Office";
+  "Free Office Templates – Word, Excel & PowerPoint | MKC Ofis";
 
 export default async function Image() {
   const image = await OgImage({

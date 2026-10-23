@@ -1,0 +1,4 @@
+# This folder must stay outside the web root. If it was placed inside it by
+# mistake, block all web access to it.
+Require all denied
+Deny from all

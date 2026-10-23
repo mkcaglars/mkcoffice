@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { getDocConfig } from "@/lib/document-types";
+import { getAppIcon, getDocConfig } from "@/lib/document-types";
 
 interface DocumentIconProps {
   type: string;
@@ -20,6 +20,7 @@ export function DocumentIcon({
 }: DocumentIconProps) {
   const config = getDocConfig(type);
   const Icon = config.icon;
+  const appIcon = getAppIcon(type);
 
   const sizeClasses = {
     sm: "w-8 h-8 rounded-lg",
@@ -32,6 +33,14 @@ export function DocumentIcon({
     md: "w-5 h-5",
     lg: "w-6 h-6",
   };
+
+  if (appIcon) {
+    return (
+      <div className={cn("flex items-center justify-center", sizeClasses[size], className)}>
+        <img src={appIcon} alt="" className="w-full h-full object-contain" draggable={false} />
+      </div>
+    );
+  }
 
   return (
     <div

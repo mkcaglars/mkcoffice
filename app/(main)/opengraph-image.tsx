@@ -6,7 +6,7 @@ export const dynamic = "force-static";
 export const contentType = "image/png";
 export const size = { width: 1200, height: 630 };
 export const alt =
-  "ZIZIYI Office - Free Online Word, Excel & PowerPoint Editor";
+  "MKC Ofis - Free Online Word, Excel & PowerPoint Editor";
 
 export default async function Image() {
   const image = await OgImage({});

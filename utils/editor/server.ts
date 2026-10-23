@@ -16,6 +16,21 @@ function mergeBuffers(buffers: Uint8Array[]) {
   return mergedBuffer;
 }
 
+// Formats x2t can write back; anything else is saved as the OOXML equivalent.
+const WRITABLE_FORMATS = [
+  "docx", "docm", "dotx", "odt", "rtf", "txt",
+  "xlsx", "xlsm", "xltx", "ods", "csv",
+  "pptx", "pptm", "potx", "ppsx", "odp",
+];
+
+// c_oAscServerCommandErrors / c_oAscForceSaveTypes from DocumentServer
+const FORCE_SAVE_NO_ERROR = 0;
+const FORCE_SAVE_NOT_MODIFIED = 4;
+const FORCE_SAVE_TYPE_BUTTON = 1;
+const SAVE_TIMEOUT = 120_000;
+
+export type SaveHandler = (data: Uint8Array, format: string) => Promise<void>;
+
 function randomId() {
   return Math.random().toString(36).substring(2, 9);
 }
@@ -54,6 +69,11 @@ export class EditorServer {
 
   private options: ServerOptions = {};
 
+  // Saving back to storage (Save button / Ctrl+S with customization.forcesave).
+  private saveHandler: SaveHandler | null = null;
+  private downloadTrigger: ((format: string) => void) | null = null;
+  private pendingSave: { time: number; format: string; timer: ReturnType<typeof setTimeout> } | null = null;
+
   constructor(options: ServerOptions = {}) {
     this.options = options;
     this.send = this.send.bind(this);
@@ -80,11 +100,11 @@ export class EditorServer {
     };
   }
 
-  openNew(fileType?: string) {
+  openNew(fileType?: string, title = "New Document") {
     this.fileType = fileType || "docx";
     // TODO: should generate new id?
     this.id = this.id || randomId();
-    this.title = "New Document";
+    this.title = title;
     const documentType = getDocumentType(this.fileType);
 
     let binData: Uint8Array | null = null;
@@ -157,6 +177,51 @@ export class EditorServer {
 
   getUser() {
     return this.user;
+  }
+
+  /**
+   * Enable saving: `trigger` asks the editor to export the document
+   * (editor.downloadAs), and `handler` receives the exported file.
+   */
+  setSaveHandler(handler: SaveHandler | null, trigger: ((format: string) => void) | null) {
+    this.saveHandler = handler;
+    this.downloadTrigger = trigger;
+  }
+
+  /** The format the current document is saved in. */
+  getSaveFormat() {
+    if (WRITABLE_FORMATS.includes(this.fileType)) return this.fileType;
+    switch (getDocumentType(this.fileType)) {
+      case "cell":
+        return "xlsx";
+      case "slide":
+        return "pptx";
+      case "pdf":
+        return "pdf";
+      default:
+        return "docx";
+    }
+  }
+
+  private startSave(time: number) {
+    const format = this.getSaveFormat();
+    const timer = setTimeout(() => this.finishSave(false), SAVE_TIMEOUT);
+    this.pendingSave = { time, format, timer };
+    this.downloadTrigger!(format);
+  }
+
+  private finishSave(success: boolean) {
+    if (!this.pendingSave) return;
+    clearTimeout(this.pendingSave.timer);
+    this.send({
+      type: "forceSave",
+      messages: {
+        type: FORCE_SAVE_TYPE_BUTTON,
+        time: this.pendingSave.time,
+        success,
+      },
+    });
+    this.pendingSave = null;
   }
 
   private async loadDocument(
@@ -344,6 +409,22 @@ export class EditorServer {
           });
         }
         break;
+      case "forceSaveStart": {
+        const time = Date.now();
+        if (!this.saveHandler || !this.downloadTrigger || this.pendingSave) {
+          send({
+            type: "forceSaveStart",
+            messages: { code: FORCE_SAVE_NOT_MODIFIED, time },
+          });
+          break;
+        }
+        send({
+          type: "forceSaveStart",
+          messages: { code: FORCE_SAVE_NO_ERROR, time },
+        });
+        this.startSave(time);
+        break;
+      }
       case "isSaveLock":
         send({
           type: "saveLock",
@@ -420,9 +501,23 @@ export class EditorServer {
         }
         if (!output) {
           console.error("Conversion failed");
+          this.finishSave(false);
           // TODO: error message
           return { status: "error" };
         }
+
+        // An export started by Save goes to storage instead of the browser.
+        if (this.pendingSave && this.saveHandler) {
+          try {
+            await this.saveHandler(new Uint8Array(output), this.pendingSave.format);
+            this.finishSave(true);
+          } catch (err) {
+            console.error("Save failed", err);
+            this.finishSave(false);
+          }
+          return { status: "ok" };
+        }
+
         const blob = new Blob([new Uint8Array(output)]);
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");

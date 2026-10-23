@@ -1,3 +1,4 @@
+import { docTypeMap, getDocumentType } from "@/utils/editor/utils";
 import {
   FileText,
   Sheet,
@@ -81,6 +82,20 @@ export const DOCUMENT_TYPES: Record<string, DocumentTypeConfig> = {
     lightBgColor: "bg-red-100",
   },
 };
+
+// MKC Ofis app icons: Kelime İşlemci, Elektronik Tablo, Sunum
+const APP_ICONS: Record<string, string> = {
+  word: "/app-icons/ki.png",
+  cell: "/app-icons/et.png",
+  slide: "/app-icons/s.png",
+};
+
+/** Branded app icon for a file extension, or null (e.g. PDF). */
+export function getAppIcon(type: string): string | null {
+  const ext = type.toLowerCase().replace(".", "");
+  if (!(ext in docTypeMap)) return null;
+  return APP_ICONS[getDocumentType(ext)] || null;
+}
 
 export function getDocConfig(type: string): DocumentTypeConfig {
   const normalizedType = type.toLowerCase().replace(".", "");

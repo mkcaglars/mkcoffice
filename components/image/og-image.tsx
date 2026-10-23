@@ -1,4 +1,5 @@
 import React from "react";
+import { SITE_URL } from "@/lib/site";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -97,7 +98,7 @@ export const OgImage = async ({
             tw="ml-4 text-3xl font-bold text-white"
             style={{ letterSpacing: "-0.02em" }}
           >
-            ZIZIYI Office
+            MKC Ofis
           </span>
         </div>
 
@@ -135,7 +136,7 @@ export const OgImage = async ({
         {/* Bottom: url */}
         <div tw="flex">
           <span tw="text-xl" style={{ color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>
-            office.ziziyi.com
+            {new URL(SITE_URL).host}
           </span>
         </div>
       </div>

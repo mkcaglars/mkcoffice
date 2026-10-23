@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useExtracted } from "next-intl";
-import { FolderOpen, Layout, Settings, Info } from "lucide-react";
+import { FolderOpen, Layout, Settings, Info, HardDrive, GraduationCap } from "lucide-react";
+import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
+import { BACKEND_ENABLED } from "@/utils/backend";
 
 interface MobileNavProps {
   pathname: string;
@@ -12,9 +14,15 @@ interface MobileNavProps {
 
 export function MobileNav({ pathname, className }: MobileNavProps) {
   const t = useExtracted();
+  const user = useAuthStore((s) => s.user);
 
   const navItems = [
-    { id: "open", label: t("Open"), icon: FolderOpen, href: "/" },
+    BACKEND_ENABLED
+      ? { id: "files", label: t("My Files"), icon: HardDrive, href: "/" }
+      : { id: "open", label: t("Open"), icon: FolderOpen, href: "/" },
+    ...(user?.role === "ogretmen"
+      ? [{ id: "students", label: t("Students"), icon: GraduationCap, href: "/students" }]
+      : []),
     {
       id: "template",
       label: t("Template"),

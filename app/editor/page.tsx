@@ -14,6 +14,16 @@ import { createXHRProxy } from "@/utils/editor/xhr";
 import { DocEditor } from "@/utils/editor/types";
 import { createExtensionLoader } from "@/utils/extension";
 import InstallExtensionDialog from "@/components/install-extension-dialog";
+import { toast } from "sonner";
+import { useExtracted } from "next-intl";
+import {
+  BACKEND_ENABLED,
+  editorUrl,
+  files as filesApi,
+  filesUrl,
+  parentPath,
+} from "@/utils/backend";
+import { getFileExt } from "@/utils/editor/utils";
 
 export default function Page() {
   const server = useAppStore((state) => state.server);
@@ -23,6 +33,16 @@ export default function Page() {
   const isDirty = useRef(false);
   const [showInstallHint, setShowInstallHint] = useState(false);
   const tryDirectRef = useRef<(() => Promise<void>) | null>(null);
+  const t = useExtracted();
+  // Translated strings for the editor callbacks, which outlive renders.
+  const labels = {
+    myFiles: t("My Files"),
+    newDocument: t("New Document"),
+    saved: (name: string) => t("Saved to {name}", { name }),
+    saveFailed: (error: string) => t("Could not save: {error}", { error }),
+  };
+  const labelsRef = useRef(labels);
+  labelsRef.current = labels;
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -49,8 +69,16 @@ export default function Page() {
     const paramEditing = searchParams.get("editing");
     const paramLang = searchParams.get("lang");
     const paramTheme = searchParams.get("theme");
+    // Server storage (PHP backend): file being edited, or folder for a new one.
+    const serverFile = BACKEND_ENABLED ? searchParams.get("file") : null;
+    // Teacher viewing a student's file: read-only, never saved.
+    const owner = serverFile ? searchParams.get("owner") : null;
+    const target = {
+      path: serverFile,
+      dir: serverFile ? parentPath(serverFile) : searchParams.get("dir") || "",
+    };
 
-    const editing = paramEditing === null ? true : paramEditing !== "0";
+    const editing = !owner && (paramEditing === null ? true : paramEditing !== "0");
     const lang = paramLang || language;
     const uiTheme = paramTheme || theme;
 
@@ -133,6 +161,17 @@ export default function Page() {
           },
           customization: {
             uiTheme: uiTheme,
+            // Save button / Ctrl+S trigger a save to server storage.
+            forcesave: BACKEND_ENABLED && !owner,
+            ...(BACKEND_ENABLED
+              ? {
+                  goback: {
+                    url: location.origin + filesUrl(target.dir, owner),
+                    text: labelsRef.current.myFiles,
+                    blank: false,
+                  },
+                }
+              : {}),
             features: {
               spellcheck: {
                 change: false,
@@ -197,6 +236,11 @@ export default function Page() {
       Object.assign(window, {
         editor,
       });
+      if (BACKEND_ENABLED && !owner) {
+        server.setSaveHandler(saveToServer, (format) =>
+          editor?.downloadAs?.(format),
+        );
+      }
       return editor;
     };
 
@@ -221,9 +265,42 @@ export default function Page() {
       };
     };
 
+    const saveToServer = async (data: Uint8Array, format: string) => {
+      const labels = labelsRef.current;
+      try {
+        let item;
+        if (target.path && getFileExt(target.path) === format) {
+          ({ item } = await filesApi.save(target.path, data));
+        } else {
+          // New document, or an old format (e.g. .doc) saved as a new file.
+          const title = server.getDocument().title || "Document";
+          const base = title.replace(/\.[^.]+$/, "") || "Document";
+          ({ item } = await filesApi.create(target.dir, `${base}.${format}`, data));
+          target.path = item.path;
+          window.history.replaceState(null, "", editorUrl(item.path));
+          document.title = item.name;
+        }
+        isDirty.current = false;
+        toast.success(labels.saved(item.name));
+      } catch (err) {
+        toast.error(labels.saveFailed((err as Error).message));
+        throw err;
+      }
+    };
+
     const init = async () => {
+      if (serverFile) {
+        try {
+          const file = await filesApi.fetch(serverFile, owner);
+          await server.open(file);
+          document.title = file.name;
+        } catch (err) {
+          toast.error((err as Error).message);
+          return;
+        }
+      }
       if (newDoc) {
-        server.openNew(newDoc)
+        server.openNew(newDoc, labelsRef.current.newDocument)
       }
       if (fileUrl && !fileId) {
         const { loader, tryDirect } = createExtensionLoader({
@@ -245,6 +322,7 @@ export default function Page() {
     return () => {
       MockSocket.off("connect", server.handleConnect);
       MockSocket.off("disconnect", server.handleDisconnect);
+      server.setSaveHandler(null, null);
       editor?.destroyEditor?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

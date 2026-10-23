@@ -18,6 +18,9 @@ const withNextIntl = createNextIntlPlugin({
 const nextConfig: NextConfig = {
   /* config options here */
   output: "export",
+  // Emit /editor/index.html instead of /editor.html so clean URLs work on
+  // any static host (Apache, LiteSpeed, nginx) without rewrite rules.
+  trailingSlash: true,
   images: {
     unoptimized: true,
   },

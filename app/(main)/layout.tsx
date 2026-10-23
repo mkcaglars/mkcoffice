@@ -13,6 +13,9 @@ import { MobileNav } from "@/components/main/mobile-nav";
 import { ExtensionPrompt } from "@/components/extension-prompt";
 import { isDarkTheme } from "@/utils/utils";
 import { APP_ROOT, PRELOAD_HTML } from "@/utils/editor/utils";
+import { AuthGate } from "@/components/auth-gate";
+import { BACKEND_ENABLED, editorUrl, files as filesApi } from "@/utils/backend";
+import { toast } from "sonner";
 
 export default function MainLayout({
   children,
@@ -20,7 +23,8 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
+  // Normalize "/template/" (trailingSlash export) to "/template".
+  const pathname = usePathname().replace(/(.)\/$/, "$1");
   const t = useExtracted();
   const { server, theme } = useAppStore();
   const preloadRef = useRef<HTMLDivElement>(null);
@@ -50,6 +54,7 @@ export default function MainLayout({
   }, [theme]);
 
   return (
+    <AuthGate>
     <div
       className={cn(
         "flex flex-col h-screen overflow-hidden font-sans transition-colors duration-500 relative",
@@ -90,10 +95,28 @@ export default function MainLayout({
       </div>
 
       {/* First-visit extension install prompt */}
-      <ExtensionPrompt />
+      {!BACKEND_ENABLED && <ExtensionPrompt />}
 
       {/* Global Drag and Drop Overlay */}
       <DragDropOverlay
+        onFilesDrop={
+          BACKEND_ENABLED
+            ? async (dropped) => {
+                // In the file manager, upload into the open folder.
+                if (pathname === "/") {
+                  window.dispatchEvent(new CustomEvent("office:upload", { detail: dropped }));
+                  return;
+                }
+                // Elsewhere, upload to the top folder and open the first file.
+                try {
+                  const { items } = await filesApi.upload("", dropped.slice(0, 1));
+                  router.push(editorUrl(items[0].path));
+                } catch (err) {
+                  toast.error((err as Error).message);
+                }
+              }
+            : undefined
+        }
         onFileDrop={async (file, handle) => {
           if (handle) {
             try {
@@ -132,5 +155,6 @@ export default function MainLayout({
 
       <div ref={preloadRef} />
     </div>
+    </AuthGate>
   );
 }

@@ -48,3 +48,7 @@ next-env.d.ts
 .edgeone/*
 .tef_dist/*
   
+# shared-hosting build
+/.ds-assets/
+/dist/
+!/deploy/office-data/.env.example

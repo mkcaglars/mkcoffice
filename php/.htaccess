@@ -1,0 +1,72 @@
+# Office — Apache / LiteSpeed configuration for shared hosting.
+# Every block is optional (wrapped in IfModule), so the site keeps working
+# even when the host has disabled some modules.
+
+Options -Indexes
+DirectoryIndex index.html index.php
+
+# --- MIME types ------------------------------------------------------------
+AddType application/wasm .wasm
+AddType application/javascript .js .mjs
+AddType application/json .json
+AddType image/svg+xml .svg
+AddType font/woff2 .woff2
+AddType font/woff .woff
+AddType font/ttf .ttf
+# Pre-compressed brotli files: "x2t.wasm.br" is served as application/wasm
+# with "Content-Encoding: br" (mod_mime, available everywhere).
+AddEncoding br .br
+RemoveLanguage .br
+
+# --- Serve pre-compressed x2t files when the browser accepts brotli --------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteCond %{HTTP:Accept-Encoding} br
+    RewriteCond %{REQUEST_FILENAME}.br -f
+    RewriteRule ^(x2t-[^/]+/.+\.(?:wasm|js))$ $1.br [L,E=no-gzip:1]
+
+    # Clean URLs: /editor -> /editor/ (Next.js export with trailing slashes)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME}.html -f
+    RewriteRule ^(.+)$ $1.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.br$">
+        Header append Vary Accept-Encoding
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+</IfModule>
+
+# --- On-the-fly compression for everything else ----------------------------
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript application/json image/svg+xml application/wasm
+    SetEnvIfNoCase Request_URI \.br$ no-gzip
+</IfModule>
+
+# --- Caching ----------------------------------------------------------------
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresDefault "access plus 10 minutes"
+    ExpiresByType text/html "access plus 0 seconds"
+    ExpiresByType application/javascript "access plus 30 days"
+    ExpiresByType text/css "access plus 30 days"
+    ExpiresByType application/wasm "access plus 30 days"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType image/png "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType application/json "access plus 10 minutes"
+</IfModule>
+
+# --- Security ---------------------------------------------------------------
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "same-origin"
+</IfModule>
+
+# Never serve hidden files (.git, .env, ...) or backups.
+<FilesMatch "(^\.|\.(bak|old|orig|log|sh)$)">
+    Require all denied
+</FilesMatch>

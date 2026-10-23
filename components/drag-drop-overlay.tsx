@@ -5,9 +5,11 @@ import { useExtracted } from "next-intl";
 
 interface DragDropOverlayProps {
   onFileDrop: (file: File, handle?: FileSystemFileHandle) => void;
+  /** When set, receives every dropped file instead of onFileDrop. */
+  onFilesDrop?: (files: File[]) => void;
 }
 
-export function DragDropOverlay({ onFileDrop }: DragDropOverlayProps) {
+export function DragDropOverlay({ onFileDrop, onFilesDrop }: DragDropOverlayProps) {
   const t = useExtracted();
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
@@ -57,6 +59,11 @@ export function DragDropOverlay({ onFileDrop }: DragDropOverlayProps) {
       const files = Array.from(e.dataTransfer.files);
       const items = Array.from(e.dataTransfer.items);
 
+      if (onFilesDrop) {
+        if (files.length > 0) onFilesDrop(files);
+        return;
+      }
+
       if (items.length > 0 && items[0].kind === "file") {
         const item = items[0];
         try {
@@ -96,7 +103,7 @@ export function DragDropOverlay({ onFileDrop }: DragDropOverlayProps) {
       dragCounter.current = 0;
       setIsDragging(false);
     };
-  }, [onFileDrop]);
+  }, [onFileDrop, onFilesDrop]);
 
   if (!isDragging) return null;
 

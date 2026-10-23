@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { PropsWithChildren } from "react";
+import { AuthGate } from "@/components/auth-gate";
 
 export const metadata: Metadata = {
-  title: "Document Editor — ZIZIYI Office",
+  title: "Document Editor — MKC Ofis",
   description:
     "Edit Word, Excel, and PowerPoint files directly in your browser. No upload, no server — fully private.",
   robots: {
@@ -12,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function Layout({ children }: PropsWithChildren<unknown>) {
-  return <>{children}</>;
+  return <AuthGate>{children}</AuthGate>;
 }

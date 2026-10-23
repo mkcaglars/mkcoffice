@@ -22,6 +22,8 @@ import {
   formatRelativeTime,
   type RecentFileRecord,
 } from "@/utils/recent-files";
+import { BACKEND_ENABLED, editorUrl, files as filesApi } from "@/utils/backend";
+import { toast } from "sonner";
 
 export function OpenView({
   recommendedTemplates,
@@ -30,7 +32,7 @@ export function OpenView({
 }) {
   const t = useExtracted();
   usePageTitle(
-    t("Free Online Office Editor — Word, Excel, PowerPoint | ZIZIYI"),
+    t("Free Online Office Editor — Word, Excel, PowerPoint | MKC Ofis"),
   );
   const [recentFiles, setRecentFiles] = useState<RecentFileRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +43,7 @@ export function OpenView({
 
   // Load recent files on mount
   useEffect(() => {
+    if (BACKEND_ENABLED) return;
     loadRecentFiles();
   }, []);
 
@@ -99,6 +102,17 @@ export function OpenView({
     file: File,
     handle?: FileSystemFileHandle,
   ) => {
+    // With the server backend, store the file in "My Files" and edit it there.
+    if (BACKEND_ENABLED) {
+      try {
+        const { items } = await filesApi.upload("", [file]);
+        router.push(editorUrl(items[0].path));
+      } catch (err) {
+        toast.error((err as Error).message);
+      }
+      return;
+    }
+
     // Only save files with FileHandle (can be reopened)
     if (handle) {
       try {
@@ -228,7 +242,8 @@ export function OpenView({
         </div>
       </section>
 
-      {/* Recent Files */}
+      {/* Recent Files (local file handles; not used with the server backend) */}
+      {!BACKEND_ENABLED && (
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">{t("Recent")}</h2>
@@ -280,6 +295,7 @@ export function OpenView({
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }

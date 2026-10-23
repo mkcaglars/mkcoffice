@@ -8,13 +8,19 @@ import {
   Info,
   Settings,
   Puzzle,
+  HardDrive,
+  LogOut,
+  UserRound,
+  GraduationCap,
 } from "lucide-react";
+import { BACKEND_ENABLED } from "@/utils/backend";
+import { useAuthStore } from "@/store/auth";
 import { useExtracted } from "next-intl";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { getNewUrl } from "@/utils/editor/utils";
 import { isExtensionAvailable, EXTENSION_STORE_URL } from "@/utils/extension";
-import { getDocConfig } from "@/lib/document-types";
+import { getAppIcon, getDocConfig } from "@/lib/document-types";
 import {
   Popover,
   PopoverContent,
@@ -27,6 +33,7 @@ interface SidebarProps {
 
 export function Sidebar({ pathname }: SidebarProps) {
   const t = useExtracted();
+  const { user, logout } = useAuthStore();
   const [hasExtension, setHasExtension] = useState(true); // default true to avoid flash
 
   useEffect(() => {
@@ -54,7 +61,12 @@ export function Sidebar({ pathname }: SidebarProps) {
   ];
 
   const sidebarItems = [
-    { id: "open", label: t("Open"), icon: FolderOpen, href: "/" },
+    BACKEND_ENABLED
+      ? { id: "files", label: t("My Files"), icon: HardDrive, href: "/" }
+      : { id: "open", label: t("Open"), icon: FolderOpen, href: "/" },
+    ...(user?.role === "ogretmen"
+      ? [{ id: "students", label: t("Student Files"), icon: GraduationCap, href: "/students" }]
+      : []),
     { id: "template", label: t("Template"), icon: Layout, href: "/template" },
   ];
 
@@ -92,6 +104,9 @@ export function Sidebar({ pathname }: SidebarProps) {
                       "dark:bg-white/5 dark:hover:bg-white/10 dark:border dark:border-white/5",
                     )}
                   >
+                    {getAppIcon(type) ? (
+                      <img src={getAppIcon(type)!} alt="" className="w-6 h-6 object-contain" />
+                    ) : (
                     <Icon
                       className={cn(
                         "w-5 h-5",
@@ -100,6 +115,7 @@ export function Sidebar({ pathname }: SidebarProps) {
                         "dark:text-primary dark:filter dark:brightness-125",
                       )}
                     />
+                    )}
                     <span className="text-sm font-medium text-foreground dark:text-slate-200">
                       {label}
                     </span>
@@ -138,7 +154,7 @@ export function Sidebar({ pathname }: SidebarProps) {
       </nav>
 
       <div className="p-4 space-y-1">
-        {!hasExtension && EXTENSION_STORE_URL && (
+        {!BACKEND_ENABLED && !hasExtension && EXTENSION_STORE_URL && (
           <a
             href={EXTENSION_STORE_URL}
             target="_blank"
@@ -197,6 +213,26 @@ export function Sidebar({ pathname }: SidebarProps) {
           />
           {t("About")}
         </Link>
+
+        {BACKEND_ENABLED && user && (
+          <div className="mt-2 pt-3 border-t border-border dark:border-white/10 flex items-center gap-2 px-3">
+            <UserRound className="w-5 h-5 text-text-secondary shrink-0" />
+            <span className="flex-1 min-w-0" title={user.name}>
+              <span className="block truncate text-sm font-medium">{user.name}</span>
+              <span className="block truncate text-xs text-text-secondary">
+                {user.role === "ogretmen" ? t("Teacher") : user.sinif || t("Student")}
+              </span>
+            </span>
+            <button
+              onClick={() => logout()}
+              title={t("Sign out")}
+              aria-label={t("Sign out")}
+              className="p-1.5 rounded-md text-text-secondary hover:text-foreground hover:bg-sidebar-hover"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );
