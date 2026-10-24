@@ -9,4 +9,4 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://office.mkca
  * offering the (modified) source to everyone who uses the app over a network.
  */
 export const SOURCE_URL =
-  process.env.NEXT_PUBLIC_SOURCE_URL || "https://github.com/baotlake/office-website";
+  process.env.NEXT_PUBLIC_SOURCE_URL || "https://github.com/mkcaglars/mkcoffice";
