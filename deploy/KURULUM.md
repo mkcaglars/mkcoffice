@@ -138,7 +138,18 @@ olacak şekilde saklanmış belgeler varsa, bunları portal `uid`'lerine taşıy
 | Belge açılmıyor, boş sayfa | `x2t-1/` ve `v9.3.1-1/` klasörleri eksik yüklenmiş olabilir; zip'i tekrar açın. |
 | "Sunucu depolama klasörü oluşturulamadı" | `office-data/` yazılabilir değil veya `open_basedir` ev klasörüne izin vermiyor. Bu durumda `data_dir`'i izinli bir yola alın ve o klasöre `.htaccess` (`Require all denied`) koyun. |
 
+## Hakkında sayfasını düzenleme
+
+Hakkında sayfasının metni `public_html/hakkinda.html` dosyasındadır. Panelin
+dosya yöneticisinden bu dosyayı açıp düzenleyin; değişiklik sayfa yenilenince
+görünür, yeniden kurulum gerekmez. Basit HTML kullanılır: `<h2>` başlık,
+`<p>` paragraf, `<ul><li>` liste, `<a href="...">` bağlantı, `<strong>` kalın.
+Sayfanın altındaki "Açık Kaynak" ve "OnlyOffice" kartları sabittir (AGPL
+lisansı kaynak kod bağlantısını gerektirir).
+
 ## Güncelleme
 
-Yeni sürümde yalnızca `public_html/` içeriğini değiştirin. `office-data/`
-klasörüne dokunmayın; kullanıcı dosyaları ve `.env` oradadır.
+Yeni sürümde `office-guncelleme.zip` paketini ev klasörüne açın (üzerine yazın).
+Bu paket yalnızca uygulamanın kendisini içerir; editör dosyalarına (`v9.3.1-1/`,
+`x2t-1/`), sunucu ayarlarına (`api/config.php`, `.htaccess`) ve
+`hakkinda.html` dosyanıza dokunmaz. `office-data/` klasörü de olduğu gibi kalır.

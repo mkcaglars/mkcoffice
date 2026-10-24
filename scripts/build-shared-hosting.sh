@@ -116,5 +116,18 @@ ZIP="$DIST/office-shared-hosting.zip"
 rm -f "$ZIP"
 (cd "$STAGE" && zip -qr -9 "$ZIP" .)
 rm -rf "$STAGE"
+
+# Update package for an existing installation: only the web app. Leaves out
+# the large editor assets, the server settings (api/config.php, .htaccess)
+# and hakkinda.html, which the site admin edits on the server.
+UPDATE="$DIST/office-guncelleme.zip"
+rm -f "$UPDATE"
+mkdir -p "$STAGE/public_html"
+(cd "$OUT" && tar cf - --exclude="./v${DS_VERSION}-*" --exclude='./x2t-*' --exclude=./files \
+  --exclude=./api --exclude=./giris.php --exclude=./.htaccess --exclude=./hakkinda.html .) \
+  | tar xf - -C "$STAGE/public_html"
+(cd "$STAGE" && zip -qr -9 "$UPDATE" .)
+rm -rf "$STAGE"
 echo ""
+echo "✓ Update package: $UPDATE ($(du -h "$UPDATE" | cut -f1))"
 echo "✓ Package ready: $ZIP ($(du -h "$ZIP" | cut -f1))"

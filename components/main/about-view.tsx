@@ -1,14 +1,30 @@
 "use client";
 
-import { Github, Info, ShieldCheck, Heart } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Github, ShieldCheck } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { usePageTitle } from "@/hooks/use-page-title";
 import Image from "next/image";
 import { APP_NAME, SOURCE_URL } from "@/lib/site";
 
+/**
+ * The site-specific part of this page comes from /hakkinda.html, a plain HTML
+ * file the site admin edits on the server (no rebuild needed). The credits
+ * below it stay fixed: the AGPL requires offering the source code.
+ */
+const CONTENT_URL = "/hakkinda.html";
+
 export function AboutView() {
   const t = useExtracted();
   usePageTitle(t("About — MKC Ofis"));
+  const [content, setContent] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(CONTENT_URL, { cache: "no-store" })
+      .then((res) => (res.ok ? res.text() : ""))
+      .then(setContent)
+      .catch(() => setContent(""));
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -19,16 +35,17 @@ export function AboutView() {
         <h1 className="text-4xl font-extrabold tracking-tight">
           {APP_NAME}
         </h1>
-        <p className="text-xl text-text-secondary max-w-2xl mx-auto">
-          {t(
-            "A modern, high-performance web-based office suite designed for the future of productivity.",
-          )}
-        </p>
-
         <p className="text-sm text-text-secondary">
           {t("Based on the open-source ZIZIYI Office project and ONLYOFFICE.")}
         </p>
       </div>
+
+      {content && (
+        <div
+          className="text-left space-y-4 leading-relaxed [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-8 [&_h2:first-child]:mt-0 [&_h3]:text-lg [&_h3]:font-semibold [&_p]:text-text-secondary [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:text-text-secondary [&_a]:text-primary [&_a]:underline [&_strong]:text-foreground [&_img]:rounded-xl [&_img]:max-w-full"
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
         <div className="p-8 bg-white/5 dark:bg-white/5 border border-border dark:border-white/10 rounded-3xl hover:border-primary/50 dark:hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all group">
@@ -66,17 +83,6 @@ export function AboutView() {
         </div>
       </div>
 
-      <div className="p-10 bg-linear-to-br from-primary/10 to-orange-500/10 dark:from-primary/15 dark:to-orange-500/5 border border-primary/20 dark:border-primary/30 rounded-3xl text-center space-y-6 shadow-lg shadow-primary/5">
-        <Heart className="w-8 h-8 text-red-500 dark:text-red-400 mx-auto fill-red-500 dark:fill-red-400 animate-pulse" />
-        <div className="space-y-2">
-          <h3 className="text-2xl font-bold">{t("Our Commitment")}</h3>
-          <p className="text-text-secondary dark:text-slate-400 text-sm max-w-xl mx-auto leading-relaxed">
-            {t(
-              "Our goal is to provide a seamless, local-first office experience while maintaining the highest standards of compatibility and open-source compliance.",
-            )}
-          </p>
-        </div>
-      </div>
     </div>
   );
 }
